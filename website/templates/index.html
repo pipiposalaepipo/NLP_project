@@ -1,17 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <title>PDF Uploader</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF NLP Uploader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .upload-card {
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: white;
+        }
+    </style>
 </head>
 <body>
-    <h2>อัปโหลดไฟล์ PDF สำหรับโปรเจกต์ NLP</h2>
-    <form action="/" method="POST" enctype="multipart/form-data">
-        <input type="file" name="pdf_file" accept=".pdf" required>
-        <button type="submit">Upload</button>
-    </form>
 
-    {% if message %}
-        <p><strong>ผลลัพธ์:</strong> {{ message }}</p>
-    {% endif %}
+<div class="container">
+    <div class="upload-card text-center">
+        <h3 class="mb-4">📄 อัปโหลดไฟล์ PDF</h3>
+        
+        <form action="/" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <input class="form-control" type="file" name="pdf_file" accept=".pdf" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm">
+                อัปโหลดและประมวลผล
+            </button>
+        </form>
+
+        {% if message %}
+        <div class="alert alert-info mt-4" role="alert">
+            {{ message }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
