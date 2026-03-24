@@ -11,6 +11,8 @@ def create_app():
     app.config['SECRET_KEY'] = 'Eieiza'
     app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'uploads')
     
+    app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  
+    
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
