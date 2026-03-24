@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Uploader</title>
+</head>
+<body>
+    <h2>อัปโหลดไฟล์ PDF สำหรับโปรเจกต์ NLP</h2>
+    <form action="/" method="POST" enctype="multipart/form-data">
+        <input type="file" name="pdf_file" accept=".pdf" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    {% if message %}
+        <p><strong>ผลลัพธ์:</strong> {{ message }}</p>
+    {% endif %}
+</body>
+</html>
