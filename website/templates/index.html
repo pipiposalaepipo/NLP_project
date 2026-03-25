@@ -3,44 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF NLP Uploader</title>
+    <title>Smart Resume Analyzer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; }
-        .upload-card {
-            max-width: 500px;
-            margin: 100px auto;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            background: white;
-        }
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <style>
+        body { background-color: #f0f5ff; font-family: 'Segoe UI', sans-serif; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .upload-box { border: 2px dashed #007bff; border-radius: 10px; padding: 20px; text-align: center; background: #fff; }
+        .btn-primary { background-color: #007bff; border: none; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="upload-card text-center">
-        <h3 class="mb-4">📄 อัปโหลดไฟล์ PDF</h3>
-        
-        <form action="/" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <input class="form-control" type="file" name="pdf_file" accept=".pdf" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm">
-                อัปโหลดและประมวลผล
-            </button>
-        </form>
+<div class="container py-5">
+    <h1 class="text-center mb-5 fw-bold">Smart Resume Analyzer</h1>
 
-        {% if message %}
-        <div class="alert alert-info mt-4" role="alert">
-            {{ message }}
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="upload-box">
+                        <h6>Upload Job Description (PDF)</h6>
+                        <input type="file" class="form-control mt-2">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="upload-box">
+                        <h6>Upload Resumes (PDF)</h6>
+                        <form action="/" method="POST" enctype="multipart/form-data">
+                            <input type="file" name="pdf_file" class="form-control mt-2" accept=".pdf">
+                            <button type="submit" class="btn btn-primary w-100 mt-3">Analyze Now</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4 p-3">
+                <h6 class="fw-bold">Candidate Ranking</h6>
+                <table class="table mt-2">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Score (NLP)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            // ใส่เป็นชื่อ เจ้าของ เรซูเม่ที่อัปโหลด แต่ละอัน
+                            <td>John Smith</td>    
+                            <td class="text-primary">92%</td>
+                            <td><span class="badge bg-success">Match</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        {% endif %}
+
+        <div class="col-md-6">
+            <div class="card p-4 h-100">
+                <h6 class="fw-bold">Skill Match Breakdown</h6>
+                <canvas id="barChart" class="mb-4"></canvas>
+
+                <h6 class="fw-bold border-top pt-3">Skill Match Profile Fit</h6>
+                <div style="max-width: 250px; margin: auto;">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // โค้ดสร้างกราฟแท่ง
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Python', 'SQL', 'AWS'],  // 
+            datasets: [{
+                label: 'Match (%)',
+                data: [90, 75, 30],
+                backgroundColor: ['#007bff', '#66ccff', '#99e6e6']
+            }]
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
+
+    // โค้ดสร้างกราฟวงกลม
+    new Chart(document.getElementById('doughnutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Technical', 'Soft Skills', 'Experience'],
+            datasets: [{
+                data: [40, 30, 30],
+                backgroundColor: ['#4b7bec', '#a55eea', '#20bf6b']
+            }]
+        }
+    });
+</script>
 </body>
 </html>
