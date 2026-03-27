@@ -1,8 +1,9 @@
 from flask import Flask
 import os
 
+from .Analyze import analyze_bp 
+
 def create_app():
-    # ใช้ os.path.dirname(os.path.abspath(__file__)) เพื่อหาตำแหน่งที่แท้จริงของโฟลเดอร์ website
     base_dir = os.path.dirname(os.path.abspath(__file__))
     template_dir = os.path.join(base_dir, 'templates')
     
@@ -10,13 +11,14 @@ def create_app():
     
     app.config['SECRET_KEY'] = 'Eieiza'
     app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'uploads')
-    
-    app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  
+    app.config['Descript_FOLDER'] = os.path.join(base_dir, 'job_descriptions')
     
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
+    if not os.path.exists(app.config['Descript_FOLDER']):
+        os.makedirs(app.config['Descript_FOLDER'])
 
-    from .view import views 
-    app.register_blueprint(views, url_prefix='/')
+    # ลงทะเบียนโดยใช้ตัวแปร Blueprint (analyze_bp)
+    app.register_blueprint(analyze_bp, url_prefix='/') 
 
     return app
