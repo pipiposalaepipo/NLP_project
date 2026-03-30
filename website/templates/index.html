@@ -36,10 +36,11 @@
                             <input type="file" name="job_pdf" class="form-control mt-2" accept=".pdf" required>
                         </div>
                     </div>
-                    <div class="col-12">
+                   <div class="col-12">
                         <div class="upload-box">
-                            <h6 class="fw-bold">Step 2: Upload Resume (PDF)</h6>
-                            <input type="file" name="resume_pdf" class="form-control mt-2" accept=".pdf" required>
+                            <h6 class="fw-bold">Step 2: Upload Resumes (Multiple PDFs)</h6>
+                            <input type="file" name="resume_pdfs" class="form-control mt-2" accept=".pdf" multiple required>
+                            <small class="text-muted">You can select multiple files at once</small>
                         </div>
                     </div>
                 </div>
@@ -49,26 +50,48 @@
                 </button>
             </form>
 
-            <div class="card mt-4 p-3">
-                <h6 class="fw-bold">Candidate Ranking</h6>
-                <table class="table mt-2">
-                    <thead>
+           <div class="card mt-4 p-3">
+    <h6 class="fw-bold">Candidate Ranking</h6>
+        <div class="table-responsive">
+            <table class="table mt-2 align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Score (NLP)</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if candidates %}
+                        {% for candidate in candidates %}
                         <tr>
-                            <th>Name</th>
-                            <th>Score (NLP)</th>
-                            <th>Status</th>
+                            <td>{{ candidate.name }}</td>
+                            <td class="text-primary fw-bold">{{ candidate.score }}%</td>
+                            <td>
+                                {% if candidate.score >= 80 %}
+                                    <span class="badge bg-success">Strong Match</span>
+                                {% elif candidate.score >= 50 %}
+                                    <span class="badge bg-warning text-dark">Potential</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Not Match</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="updateCharts('{{ candidate.id }}')">View Details</button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
+                        {% endfor %}
+                    {% else %}
                         <tr>
-                            <td>John Smith</td>    
-                            <td class="text-primary">92%</td>
-                            <td><span class="badge bg-success">Match</span></td>
+                            <td colspan="4" class="text-center text-muted">No data analyzed yet.</td>
                         </tr>
-                    </tbody>
-                </table>
-            </div>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
+    </div>
+</div>
 
         <div class="col-md-6">
             <div class="card p-4 h-100">
@@ -82,33 +105,69 @@
             </div>
         </div>
     </div>
-</div>
+
 
 <script>
-    // โค้ดสร้างกราฟเหมือนเดิม
-    new Chart(document.getElementById('barChart'), {
-        type: 'bar',
-        data: {
-            labels: ['Python', 'SQL', 'AWS'], 
-            datasets: [{
-                label: 'Match (%)',
-                data: [90, 75, 30],
-                backgroundColor: ['#007bff', '#66ccff', '#99e6e6']
-            }]
-        },
-        options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-    });
+    // 1. รับข้อมูลจาก Python ผ่าน Jinja2 filter 'tojson'
+    // หากทดสอบแบบไม่มี Backend ให้เปลี่ยนเป็น: const candidatesData = [ใส่ mock data ตรงนี้];
+   const candidatesData = JSON.parse('{{ candidates | tojson | safe if candidates else "[]" }}');
 
-    new Chart(document.getElementById('doughnutChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Technical', 'Soft Skills', 'Experience'],
-            datasets: [{
-                data: [40, 30, 30],
-                backgroundColor: ['#4b7bec', '#a55eea', '#20bf6b']
-            }]
+
+    // 2. ประกาศตัวแปร Chart ไว้ข้างนอกเพื่อให้ฟังก์ชันอื่นเรียกใช้ได้
+    let barChart;
+    let doughnutChart;
+
+    // 3. ฟังก์ชันเริ่มต้นสร้างกราฟ (Initial Load)
+    function initCharts() {
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        const doughCtx = document.getElementById('doughnutChart').getContext('2d');
+
+        barChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Python', 'SQL', 'AWS'],
+                datasets: [{
+                    label: 'Match (%)',
+                    data: [0, 0, 0], // เริ่มต้นที่ 0
+                    backgroundColor: ['#007bff', '#66ccff', '#99e6e6']
+                }]
+            },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+        });
+
+        doughnutChart = new Chart(doughCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Technical', 'Soft Skills', 'Experience'],
+                datasets: [{
+                    data: [1, 1, 1], // ข้อมูลเริ่มต้น
+                    backgroundColor: ['#4b7bec', '#a55eea', '#20bf6b']
+                }]
+            }
+        });
+    }
+
+    // 4. ฟังก์ชันอัปเดตกราฟเมื่อกดปุ่ม View Details
+    function updateCharts(candidateId) {
+        // ค้นหาข้อมูลผู้สมัครจาก ID
+        const candidate = candidatesData.find(c => String(c.id) === String(candidateId));
+
+        if (candidate) {
+            // อัปเดตข้อมูลใน Bar Chart
+            barChart.data.datasets[0].data = candidate.skills;
+            barChart.update();
+
+            // อัปเดตข้อมูลใน Doughnut Chart
+            doughnutChart.data.datasets[0].data = candidate.breakdown;
+            doughnutChart.update();
+
+            // เลื่อนหน้าจอไปที่กราฟ (Optional)
+            document.getElementById('barChart').scrollIntoView({ behavior: 'smooth' });
         }
-    });
+    }
+
+    // เรียกใช้งานฟังก์ชันสร้างกราฟทันทีที่โหลดหน้าเว็บ
+    window.onload = initCharts;
 </script>
 </body>
 </html>
