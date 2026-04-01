@@ -125,10 +125,10 @@
         barChart = new Chart(barCtx, {
             type: 'bar',
             data: {
-                labels: ['Python', 'SQL', 'AWS'],
+                labels: ['Skill 1', 'Skill 2', 'Skill 3'], // เปลี่ยนจาก fixed
                 datasets: [{
                     label: 'Match (%)',
-                    data: [0, 0, 0], // เริ่มต้นที่ 0
+                    data: [0, 0, 0],
                     backgroundColor: ['#007bff', '#66ccff', '#99e6e6']
                 }]
             },
@@ -149,19 +149,17 @@
 
     // 4. ฟังก์ชันอัปเดตกราฟเมื่อกดปุ่ม View Details
     function updateCharts(candidateId) {
-        // ค้นหาข้อมูลผู้สมัครจาก ID
         const candidate = candidatesData.find(c => String(c.id) === String(candidateId));
 
         if (candidate) {
-            // อัปเดตข้อมูลใน Bar Chart
+            // อัปเดต labels จาก matched skills จริงๆ
+            barChart.data.labels = candidate.matched_skills || ['Skill 1', 'Skill 2', 'Skill 3'];
             barChart.data.datasets[0].data = candidate.skills;
             barChart.update();
 
-            // อัปเดตข้อมูลใน Doughnut Chart
             doughnutChart.data.datasets[0].data = candidate.breakdown;
             doughnutChart.update();
 
-            // เลื่อนหน้าจอไปที่กราฟ (Optional)
             document.getElementById('barChart').scrollIntoView({ behavior: 'smooth' });
         }
     }

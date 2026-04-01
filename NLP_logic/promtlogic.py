@@ -1,60 +1,54 @@
 # NLP_logic/promtlogic.py
+# หน้าที่: ส่ง Job Description ให้ LLM extract keywords เท่านั้น
+# NLP Pipeline ที่แท้จริงอยู่ใน NLP.py
+
 import json
 import re
 from Call_API import GeminiManager
+import os
 
-API_KEY = "AIzaSyCnpJ3c5F4o_FucVaXI-YoM5bTsJsRy2jk"
+API_KEY = os.environ.get("AIzaSyA3QuuM3gt9Cr4v-cLskfpJeDRgnAz5ERs")
 ai_assistant = GeminiManager(API_KEY)
 
 
-def analyze_resume_against_jd(resume_text: str, jd_text: str) -> dict:
+def extract_keywords_from_jd(jd_text: str) -> list:
     """
-    ส่ง Resume + Job Description ให้ Gemini วิเคราะห์
-    คืนค่าเป็น dict ที่พร้อมใช้งานใน Analyze.py
+    ส่ง JD text ให้ Gemini extract keywords
+    คืน list of keyword strings เช่น ["Python", "SQL", "3 years experience"]
     """
-
     prompt = f"""
-คุณคือผู้เชี่ยวชาญด้าน HR และ NLP
-เปรียบเทียบ Resume กับ Job Description ที่ให้มา แล้วตอบเป็น JSON เท่านั้น
-ห้ามมีคำอธิบายหรือ markdown อื่นใดนอกจาก JSON
+You are an HR expert. Extract important keywords from the Job Description below.
+Reply with JSON only — no explanation, no markdown.
 
-รูปแบบ JSON ที่ต้องการ (ตัวเลขทั้งหมดเป็น integer 0-100):
+Return this exact format:
 {{
-  "overall_score": <คะแนนรวมความเหมาะสม 0-100>,
-  "technical_score": <คะแนนทักษะเทคนิค 0-100>,
-  "softskill_score": <คะแนน soft skills 0-100>,
-  "experience_score": <คะแนนประสบการณ์ 0-100>,
-  "matched_skills": [<ทักษะที่ตรงกับ JD สูงสุด 3 อย่าง>],
-  "skill_scores": [<คะแนนทักษะแต่ละอย่างใน matched_skills ตามลำดับ>],
-  "summary": "<สรุปความเหมาะสมใน 1-2 ประโยคภาษาอังกฤษ>"
+  "keywords": ["keyword1", "keyword2", "keyword3", ...]
 }}
+
+Rules:
+- Include technical skills (e.g. Python, SQL, AWS)
+- Include soft skills (e.g. teamwork, communication)
+- Include experience requirements (e.g. 3 years experience)
+- Maximum 15 keywords
+- Use the exact words from the JD
 
 Job Description:
 {jd_text}
-
-Resume:
-{resume_text}
 """
 
     raw = ai_assistant.send_request(prompt)
+    print("RAW:", raw) 
 
-    # ดึง JSON ออกจาก response (กัน Gemini แนบ markdown มาด้วย)
     try:
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
         if json_match:
             result = json.loads(json_match.group())
-        else:
-            raise ValueError("No JSON found in response")
+            keywords = result.get("keywords", [])
+            # กัน Gemini คืนค่าผิด format
+            if isinstance(keywords, list) and len(keywords) > 0:
+                return keywords
     except Exception:
-        # Fallback กรณี parse ไม่ได้
-        result = {
-            "overall_score": 0,
-            "technical_score": 0,
-            "softskill_score": 0,
-            "experience_score": 0,
-            "matched_skills": ["N/A", "N/A", "N/A"],
-            "skill_scores": [0, 0, 0],
-            "summary": "Could not parse AI response."
-        }
+        pass
 
-    return result
+    # Fallback: ถ้า parse ไม่ได้ คืน list ว่าง
+    return []
