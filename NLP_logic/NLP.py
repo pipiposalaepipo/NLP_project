@@ -8,19 +8,18 @@
 # STEP 5: compute_score()          — รวมผลจาก fuzzy + tfidf → score 0-100
 
 import re
-import pypdf
 import nltk
+from pdfminer.high_level import extract_text
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from rapidfuzz import fuzz
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from pdfminer.high_level import extract_text
 
 # ดาวน์โหลด resource ที่ nltk ต้องการ (รันครั้งแรกเท่านั้น)
-nltk.download('punkt',        quiet=True)
-nltk.download('punkt_tab',    quiet=True)
-nltk.download('stopwords',    quiet=True)
+nltk.download('punkt',     quiet=True)
+nltk.download('punkt_tab', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 STOP_WORDS = set(stopwords.words('english'))
 FUZZY_THRESHOLD = 75  # คะแนน fuzzy ขั้นต่ำที่ถือว่า "ตรง" (0-100)
@@ -30,11 +29,32 @@ FUZZY_THRESHOLD = 75  # คะแนน fuzzy ขั้นต่ำที่ถ�
 # STEP 1: PDF Extraction
 # ─────────────────────────────────────────────
 def extract_text_from_pdf(pdf_path: str) -> str:
+    """อ่านข้อความทุก page จาก PDF แล้วคืนเป็น string"""
     try:
         text = extract_text(pdf_path)
         return text.strip()
     except Exception as e:
         return f"[PDF Error: {e}]"
+
+
+# ─────────────────────────────────────────────
+# Email Extraction
+# ─────────────────────────────────────────────
+def extract_email(text: str) -> str:
+    match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}', text)
+    if match:
+        email = match.group()
+       
+        dot_pos = email.rfind('.')
+        extension = ''
+        for ch in email[dot_pos+1:]:
+            if ch.isalpha():
+                extension += ch
+            else:
+                break
+        return email[:dot_pos+1] + extension
+    return "No email found"
+
 
 # ─────────────────────────────────────────────
 # STEP 2: Tokenization + Preprocessing
@@ -65,14 +85,7 @@ def fuzzy_match_keywords(resume_tokens: list, keywords: list) -> dict:
     ใช้ fuzz.partial_ratio เพื่อจับ:
       - "Python"  vs "python3"    → match
       - "React"   vs "ReactJS"    → match
-      - "Java"    vs "JavaScript" → ไม่ match (score ต่ำกว่า threshold)
-
-    คืน dict:
-      {
-        "matched":    ["Python", "SQL", ...],
-        "missing":    ["AWS", ...],
-        "match_rate": 0.75
-      }
+      - "Java"    vs "JavaScript" → ไม่ match 
     """
     resume_text_joined = " ".join(resume_tokens)
     matched = []
@@ -102,11 +115,6 @@ def fuzzy_match_keywords(resume_tokens: list, keywords: list) -> dict:
 def tfidf_score(resume_text: str, jd_text: str) -> float:
     """
     วัดความคล้ายคลึงระหว่าง Resume กับ JD ด้วย TF-IDF + Cosine Similarity
-
-    แนวคิด:
-      - TF-IDF แปลง text เป็น vector โดยให้น้ำหนักคำที่สำคัญมากกว่า stopwords
-      - Cosine Similarity วัดมุมระหว่าง vector → 1.0 = เหมือนกันทุกอย่าง
-
     คืนค่า float 0.0 - 1.0
     """
     try:
@@ -124,14 +132,8 @@ def tfidf_score(resume_text: str, jd_text: str) -> float:
 def compute_score(match_rate: float, tfidf_sim: float) -> int:
     """
     รวมผลจาก 2 วิธีเป็น score เดียว 0-100
-
-    สูตร (Weighted Average):
-      - Fuzzy Match Rate  → น้ำหนัก 60%  (ตรงกับ keyword ที่ HR กำหนด)
-      - TF-IDF Similarity → น้ำหนัก 40%  (ความใกล้เคียงโดยรวมกับ JD)
-
-    เหตุผลที่ Fuzzy มีน้ำหนักมากกว่า:
-      keyword ที่ LLM ดึงมาจาก JD คือสิ่งที่ HR ต้องการจริงๆ
-      TF-IDF เป็น bonus สำหรับ Resume ที่เขียนสอดคล้องกับ JD โดยรวม
+    - Fuzzy Match Rate  → น้ำหนัก 60%
+    - TF-IDF Similarity → น้ำหนัก 40%
     """
     score = (match_rate * 0.60) + (tfidf_sim * 0.40)
     return round(score * 100)
@@ -140,27 +142,24 @@ def compute_score(match_rate: float, tfidf_sim: float) -> int:
 # ─────────────────────────────────────────────
 # Public Function: analyze_resume (เรียกจาก Analyze.py)
 # ─────────────────────────────────────────────
-def analyze_resume(resume_path: str, jd_text: str, keywords: list) -> dict:
+def analyze_resume(resume_text: str, jd_text: str, keywords: list) -> dict:
     """
-    รัน NLP Pipeline ทั้งหมดสำหรับ Resume 1 ไฟล์
+    รัน NLP Pipeline ทั้งหมด รับ resume_text โดยตรง (ไม่อ่าน PDF ซ้ำ)
 
     Parameters:
-      resume_path : path ของไฟล์ PDF
+      resume_text : ข้อความจาก Resume (plain text)
       jd_text     : ข้อความ JD (plain text)
       keywords    : list ของ keyword ที่ LLM extract จาก JD
 
     Returns dict:
       {
-        "score":       78,
-        "match_rate":  0.75,
-        "tfidf_sim":   0.62,
-        "matched":     ["Python", "SQL", ...],
-        "missing":     ["AWS", ...]
+        "score":      78,
+        "match_rate": 0.75,
+        "tfidf_sim":  0.62,
+        "matched":    ["Python", "SQL", ...],
+        "missing":    ["AWS", ...]
       }
     """
-    # STEP 1
-    resume_text = extract_text_from_pdf(resume_path)
-
     # STEP 2
     resume_tokens = preprocess(resume_text)
 
