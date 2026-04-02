@@ -80,20 +80,15 @@ def preprocess(text: str) -> list:
 # STEP 3: Fuzzy Matching
 # ─────────────────────────────────────────────
 def fuzzy_match_keywords(resume_tokens: list, keywords: list) -> dict:
-    """
-    จับคู่ keyword แต่ละตัวกับ token ใน Resume แบบ fuzzy
-    ใช้ fuzz.partial_ratio เพื่อจับ:
-      - "Python"  vs "python3"    → match
-      - "React"   vs "ReactJS"    → match
-      - "Java"    vs "JavaScript" → ไม่ match 
-    """
     resume_text_joined = " ".join(resume_tokens)
     matched = []
     missing = []
+    keyword_scores = {}  # ← เพิ่ม dict เก็บ score แต่ละ keyword
 
     for kw in keywords:
         kw_clean = kw.lower().strip()
         score = fuzz.partial_ratio(kw_clean, resume_text_joined)
+        keyword_scores[kw] = score  # ← เก็บ score ทุกตัว
         if score >= FUZZY_THRESHOLD:
             matched.append(kw)
         else:
@@ -103,11 +98,11 @@ def fuzzy_match_keywords(resume_tokens: list, keywords: list) -> dict:
     match_rate = len(matched) / total if total > 0 else 0.0
 
     return {
-        "matched":    matched,
-        "missing":    missing,
-        "match_rate": round(match_rate, 4)
+        "matched":       matched,
+        "missing":       missing,
+        "match_rate":    round(match_rate, 4),
+        "keyword_scores": keyword_scores  
     }
-
 
 # ─────────────────────────────────────────────
 # STEP 4: TF-IDF Similarity
@@ -142,24 +137,20 @@ def compute_score(match_rate: float, tfidf_sim: float) -> int:
 # ─────────────────────────────────────────────
 # Public Function: analyze_resume (เรียกจาก Analyze.py)
 # ─────────────────────────────────────────────
-def analyze_resume(resume_text: str, jd_text: str, keywords: list) -> dict:
-    """
-    รัน NLP Pipeline ทั้งหมด รับ resume_text โดยตรง (ไม่อ่าน PDF ซ้ำ)
+def analyze_resume(resume_text, jd_text, keywords):
+    resume_tokens = preprocess(resume_text)
+    fuzzy_result  = fuzzy_match_keywords(resume_tokens, keywords)
+    sim           = tfidf_score(resume_text, jd_text)
+    score         = compute_score(fuzzy_result["match_rate"], sim)
 
-    Parameters:
-      resume_text : ข้อความจาก Resume (plain text)
-      jd_text     : ข้อความ JD (plain text)
-      keywords    : list ของ keyword ที่ LLM extract จาก JD
-
-    Returns dict:
-      {
-        "score":      78,
-        "match_rate": 0.75,
-        "tfidf_sim":  0.62,
-        "matched":    ["Python", "SQL", ...],
-        "missing":    ["AWS", ...]
-      }
-    """
+    return {
+        "score":          score,
+        "match_rate":     fuzzy_result["match_rate"],
+        "tfidf_sim":      sim,
+        "matched":        fuzzy_result["matched"],
+        "missing":        fuzzy_result["missing"],
+        "keyword_scores": fuzzy_result["keyword_scores"] 
+    }
     # STEP 2
     resume_tokens = preprocess(resume_text)
 

@@ -46,12 +46,13 @@ def start_analysis():
             # รัน NLP Pipeline
             nlp_result = analyze_resume(resume_text, jd_text, keywords)
 
-            # top 3 matched skills สำหรับ Bar Chart
-            matched    = nlp_result["matched"]
-            top_skills = (matched + ["N/A", "N/A", "N/A"])[:3]
+            # top 3 matched skills + fuzzy score จริง
+            keyword_scores = nlp_result["keyword_scores"]
+            matched        = nlp_result["matched"]
+            top_skills     = (matched + ["N/A", "N/A", "N/A"])[:3]
             top_skill_scores = [
-                round((1 - idx * 0.15) * 100) if s != "N/A" else 0
-                for idx, s in enumerate(top_skills)
+                keyword_scores.get(s, 0) if s != "N/A" else 0
+                for s in top_skills
             ]
 
             keyword_match  = round(nlp_result["match_rate"] * 100)
@@ -63,7 +64,6 @@ def start_analysis():
                 "score":          nlp_result["score"],
                 "skills":         top_skill_scores[:3],
                 "matched_skills": top_skills,
-                # breakdown 2 ส่วน รวมกัน = 100
                 "breakdown":      [keyword_match, missing_skills],
                 "tfidf_sim":      round(nlp_result["tfidf_sim"] * 100),
                 "matched":        nlp_result["matched"],
@@ -78,7 +78,7 @@ def start_analysis():
         keywords_str = ", ".join(keywords)
         return render_template(
             'index.html',
-            message=f"✅ วิเคราะห์สำเร็จ {len(results)} คน | Keywords: {len(keywords)} คำ → {keywords_str}",
+            message=f" วิเคราะห์สำเร็จ {len(results)} คน | Keywords: {len(keywords)} คำ → {keywords_str}",
             candidates=results
         )
 
